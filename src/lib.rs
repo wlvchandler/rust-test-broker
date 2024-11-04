@@ -2,6 +2,8 @@ mod buffer;
 mod error;
 mod metrics;
 
+pub mod net;
+
 pub use buffer::RingBuffer;
 pub use error::BrokerError;
 pub use metrics::Metrics;
