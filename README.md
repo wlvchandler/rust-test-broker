@@ -1,3 +1,5 @@
+Networked part doesn't work yet. Can't really do DPDK easily but I'll do that later probably
+
 ### non networked, cache only, un-tuned system
 
 | Message Size | Messages/sec | Throughput (Gb/sec) | Min Latency | P50 Latency | P99 Latency | P99.9 Latency | Max Latency |
