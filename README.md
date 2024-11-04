@@ -1,5 +1,3 @@
-Networked part doesn't work yet. Can't really do DPDK easily but I'll do that later probably
-
 ### non networked, cache only, un-tuned system
 
 | Message Size | Messages/sec | Throughput (Gb/sec) | Min Latency | P50 Latency | P99 Latency | P99.9 Latency | Max Latency |
@@ -23,6 +21,41 @@ Networked part doesn't work yet. Can't really do DPDK easily but I'll do that la
 | 512 bytes   | 17,388,410  | 8.49              | 10ns        | 30ns        | 80ns        | 180ns         | 17.232µs    |
 | 1024 bytes  | 11,550,830  | 11.28             | 10ns        | 40ns        | 140ns       | 331ns         | 499.366µs   |
 | 4096 bytes  | 3,438,658   | 13.43             | 40ns        | 241ns       | 561ns       | 702ns         | 61.767µs    |
+
+
+### TCP (localhost), tuned system (Average of 15 runs)
+
+| Message Size | Messages/s  | Throughput (Gbps) | 
+|------------:|-------------:|-------------------:|
+| 1024 bytes  | 4,109,253.19 | 33.68              |
+
+
+
+#### optimizations?
+- large batching (which means minimal syscalls)
+- object refurbishing/buffer reuse
+- zero-copy where possible
+- carefully aligned memory access
+- minimal overhead from actual data processing after the consumer eats it.
+  - with a black box in the consumer task, it can get up to the throughput lol
+
+```rust
+// in consumer task we could just do this to prevent compiler optimization I believe
+if batch_size > 0 {
+    black_box(&msg_buf[..batch_size]);  
+}
+```
+
+Worth noting that despite all the performance measures, this throughput/latency is just as importantly from a couple other things:
+- we're localhost, so TCP messages are not actually hitting hardware. And, modern kernels heavily optimize localhost tcp, especially with TCP_NODELAY
+- data stays in kernel memory and uses memory copies instead of network io
+
+I plan to test later over a LAN. That being said, with properly tuned NICs capable of high Gbps similar numbers are possible. Or at least with some kind of kernel bypass :P Can't really do DPDK easily but maybe I'll try to do that later 
+
+
+
+
+#### first round of latency benchmarking before throughput was prioritized (removed `bench.rs` for now):
 
 ```
 will@DESKTOP-71HHMI5:~/broker$ ./target/release/bench
