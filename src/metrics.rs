@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-///metrcs for benchmarking/monitoring
 #[derive(Debug)]
 pub struct Metrics {
     pub min: Duration,
@@ -17,10 +16,8 @@ impl Metrics {
     pub fn from_measurements(latencies: &mut Vec<Duration>, total_bytes: usize, duration: Duration) -> Self {
         latencies.sort_unstable();
         let len = latencies.len();
-        
         let bytes_per_sec = (total_bytes as f64) / duration.as_secs_f64();
         let mb_per_sec = bytes_per_sec / (1024.0 * 1024.0);
-        
         Metrics {
             min: latencies[0],
             p50: latencies[len / 2],

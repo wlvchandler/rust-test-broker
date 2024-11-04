@@ -1,43 +1,46 @@
 use broker::net::BrokerClient;
 use std::time::Instant;
-use std::io::Write;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hasher;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     const MESSAGE_SIZE: usize = 1024;
-    const ITERATIONS: usize = 10_000;  // reduced for testing
+    const ITERATIONS: usize = 1_000_000;
     
-    println!("Connecting to broker...");
+    println!("test_start msg_count:{} msg_bytes:{}", ITERATIONS, MESSAGE_SIZE);
     let mut client = BrokerClient::connect("127.0.0.1:7878").await?;
-    println!("connected");
     
-    let data = vec![1u8; MESSAGE_SIZE];
+    let mut data = vec![0u8; MESSAGE_SIZE];
     let start = Instant::now();
     
     for i in 0..ITERATIONS {
-        if i % 100 == 0 {  // More frequent updates
-            print!("\rProgress: {:.1}%", (i as f64 / ITERATIONS as f64) * 100.0);
-            std::io::stdout().flush()?;
-        }
-
-        match client.send(&data).await {
-            Ok(_) => {
-                if i % 1000 == 0 {
-                    println!("\nSent {} messages", i);
-                }
-            }
-            Err(e) => {
-                println!("\nError at iteration {}: {:?}", i, e);
-                break;
-            }
-        }
+        // add timestamp, sequence, and calculate cksum
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64;
+        data[0..8].copy_from_slice(&now.to_le_bytes());
+        
+        let sequence = i as u64;
+        data[8..16].copy_from_slice(&sequence.to_le_bytes());
+        
+        let mut hasher = DefaultHasher::new();
+        hasher.write_u64(now);
+        hasher.write_u64(sequence);
+        hasher.write(&data[20..]);
+        let checksum = hasher.finish() as u32;
+        data[16..20].copy_from_slice(&checksum.to_le_bytes());
+        
+        client.send(&data).await?;
     }
+    
+    client.flush().await?;
     
     let elapsed = start.elapsed();
     let throughput = (MESSAGE_SIZE * ITERATIONS) as f64 / elapsed.as_secs_f64();
     
-    println!("\nResults:");
-    println!("Time: {:?}", elapsed);
+    println!("\nResults (time: {:?}):", elapsed);
     println!("Throughput: {:.2} GB/s", throughput / 1e9);
     println!("Messages/sec: {:.2}", ITERATIONS as f64 / elapsed.as_secs_f64());
     
