@@ -1,0 +1,73 @@
+name: CI
+
+# Trigger the workflow on push or pull request events to the main branch
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    # Strategy matrix to test multiple Rust versions if needed
+    strategy:
+      matrix:
+        rust-version: [stable]
+
+    steps:
+      # Checkout the repository code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Rust toolchain
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust-version }}
+          profile: minimal
+          override: true
+          components: clippy, rustfmt
+
+      # Cache Cargo registry and build artifacts for faster builds
+      - name: Cache Cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-
+
+      - name: Cache Cargo build
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-
+
+      # Install dependencies (optional if you have system dependencies)
+      # - name: Install dependencies
+      #   run: sudo apt-get install -y <dependencies>
+
+      # Build the project in release mode
+      - name: Build
+        run: cargo build --release
+
+      # Run tests
+      - name: Run tests
+        run: cargo test --all --release
+
+      # Run Clippy for linting
+      - name: Run Clippy
+        run: cargo clippy --all -- -D warnings
+
+      # (Optional) Format check with rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
