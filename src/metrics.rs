@@ -13,7 +13,7 @@ pub struct Metrics {
 
 impl Metrics {
     /// summary from raw latency measurements
-    pub fn from_measurements(latencies: &mut Vec<Duration>, total_bytes: usize, duration: Duration) -> Self {
+    pub fn from_measurements(latencies: &mut [Duration], total_bytes: usize, duration: Duration) -> Self {
         latencies.sort_unstable();
         let len = latencies.len();
         let bytes_per_sec = (total_bytes as f64) / duration.as_secs_f64();
