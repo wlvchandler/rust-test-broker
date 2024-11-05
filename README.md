@@ -53,6 +53,47 @@ Worth noting that despite all the performance measures, this throughput/latency 
 I plan to test later over a LAN. That being said, with properly tuned NICs capable of high Gbps similar numbers are possible. Or at least with some kind of kernel bypass :P Can't really do DPDK easily but maybe I'll try to do that later 
 
 
+### how to run
+``` cargo build --release ```
+
+Open two terminals or run the server in the background
+
+```
+# terminal 1
+cargo run --release --bin server
+
+# terminal 2
+cargo run --release --bin server
+```
+
+#### Example 
+
+```
+will@DESKTOP-71HHMI5:~/broker$ cargo run --release --bin client
+   Compiling broker v0.1.0 (/home/rust/broker)
+    Finished `release` profile [optimized] target(s) in 2.93s
+     Running `target/release/client`
+Starting client. Press Ctrl+C to stop.
+test_start msg_bytes:1024
+DEBUG: Connecting to 127.0.0.1:7878
+SUCCESS: Connected to 127.0.0.1:7878
+DEBUG: Client sent 16 million messages
+DEBUG: Client sent 32 million messages
+DEBUG: Client sent 48 million messages
+DEBUG: Client sent 64 million messages
+DEBUG: Client sent 80 million messages
+DEBUG: Client sent 96 million messages
+DEBUG: Client sent 112 million messages
+DEBUG: Client sent 128 million messages
+^C
+Shutdown signal received. Stopping client...
+
+Results (time: 36.602244707s):
+Throughput: 3.66 GB/s
+Messages/sec: 3574831.27
+Total messages sent: 130846849
+Total bytes sent: 133987173376
+```
 
 
 #### first round of latency benchmarking before throughput was prioritized (removed `bench.rs` for now):
