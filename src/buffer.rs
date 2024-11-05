@@ -53,13 +53,29 @@ impl RingBuffer {
         }
 
         let write_index = (producer_index as usize) & self.mask;
-        
-        unsafe {
-            ptr::copy_nonoverlapping(
-                data.as_ptr(),
-                self.data.add(write_index),
-                size,
-            );
+        let buffer_end = self.mask + 1;
+        let first_part = buffer_end - write_index;
+        if size <= first_part {
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    data.as_ptr(),
+                    self.data.add(write_index),
+                    size,
+                );
+            }
+        } else {
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    data.as_ptr(),
+                    self.data.add(write_index),
+                    first_part,
+                );
+                ptr::copy_nonoverlapping(
+                    data.as_ptr().add(first_part),
+                    self.data,
+                    size-first_part,
+                );
+            }
         }
 
         self.producer_index.store(
@@ -75,19 +91,36 @@ impl RingBuffer {
         let producer_index = self.producer_index.load(Ordering::Acquire);
 
         if consumer_index == producer_index {
-            return Err(BrokerError::BufferFull);
+            return Err(BrokerError::BufferEmpty);
         }
 
         let available = producer_index.wrapping_sub(consumer_index) as usize;
         let size = buf.len().min(available);
         let read_index = (consumer_index as usize) & self.mask;
+        let buffer_end = self.mask + 1;
+        let first_part = buffer_end-read_index;
 
-        unsafe {
-            ptr::copy_nonoverlapping(
-                self.data.add(read_index),
-                buf.as_mut_ptr(),
-                size,
-            );
+        if size <= first_part {
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    self.data.add(read_index),
+                    buf.as_mut_ptr(),
+                    size,
+                );
+            }
+        } else { // wrap around
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    self.data.add(read_index),
+                    buf.as_mut_ptr(),
+                    first_part,
+                );
+                ptr::copy_nonoverlapping(
+                    self.data,
+                    buf.as_mut_ptr().add(first_part),
+                    size - first_part,
+                );
+            }
         }
 
         self.consumer_index.store(

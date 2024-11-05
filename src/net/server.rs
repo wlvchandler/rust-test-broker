@@ -2,7 +2,7 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::watch;
 use std::sync::Arc;
 use crate::RingBuffer;
-use crate::error::{NetworkError};
+use crate::error::{NetworkError, BrokerError};
 use crate::{BUFFER_CHUNK, BATCH_SIZE};
 use crate::net::message::{MessageHeader, ProcessedMessage};
 use std::hint::black_box;
@@ -101,10 +101,14 @@ async fn handle_connection(
                         batch_size += size;
                         messages_consumed += 1;
                     },
-                    Err(_) => {
+                    Err(BrokerError::BufferEmpty) => {
                         if batch_size > 0 { break }
                         tokio::task::yield_now().await;
                         continue;
+                    },
+                    Err(e) => {
+                        eprintln!("ring buffer read error: {:?}", e);
+                        break;
                     },
                 }
             }
@@ -160,7 +164,9 @@ async fn handle_connection(
         }
     }
 
-    consumer.abort();
+    // instead of abort
+    // let the consumer exit nicely before starting another
+    consumer.await?;
     Ok(())
 }
 
