@@ -1,8 +1,8 @@
-use tokio::net::TcpStream;
-use tokio::io::{AsyncWriteExt, BufWriter};
-use crate::{BUFFER_CHUNK, BATCH_SIZE};
 use crate::error::NetworkError;
 use crate::net::message::MessageHeader;
+use crate::{BATCH_SIZE, BUFFER_CHUNK};
+use tokio::io::{AsyncWriteExt, BufWriter};
+use tokio::net::TcpStream;
 
 pub struct BrokerClient {
     writer: BufWriter<TcpStream>,
@@ -41,7 +41,7 @@ impl BrokerClient {
             let header_bytes = unsafe {
                 std::slice::from_raw_parts(
                     &header as *const _ as *const u8,
-                    std::mem::size_of::<MessageHeader>()
+                    std::mem::size_of::<MessageHeader>(),
                 )
             };
 
@@ -53,8 +53,10 @@ impl BrokerClient {
             self.batch_count = 0;
 
             if self.total_sent % 1_000_000 == 0 {
-                eprintln!("DEBUG: Client sent {} million messages",
-                    self.total_sent / 1_000_000);
+                eprintln!(
+                    "DEBUG: Client sent {} million messages",
+                    self.total_sent / 1_000_000
+                );
             }
         }
 
@@ -72,7 +74,7 @@ impl BrokerClient {
             let header_bytes = unsafe {
                 std::slice::from_raw_parts(
                     &header as *const _ as *const u8,
-                    std::mem::size_of::<MessageHeader>()
+                    std::mem::size_of::<MessageHeader>(),
                 )
             };
 
@@ -86,4 +88,3 @@ impl BrokerClient {
         Ok(())
     }
 }
-

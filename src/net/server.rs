@@ -1,12 +1,12 @@
+use crate::error::{BrokerError, NetworkError};
+use crate::net::message::{MessageHeader, ProcessedMessage};
+use crate::RingBuffer;
+use crate::{BATCH_SIZE, BUFFER_CHUNK};
+use std::hint::black_box;
+use std::sync::Arc;
+use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::watch;
-use std::sync::Arc;
-use crate::RingBuffer;
-use crate::error::{NetworkError, BrokerError};
-use crate::{BUFFER_CHUNK, BATCH_SIZE};
-use crate::net::message::{MessageHeader, ProcessedMessage};
-use std::hint::black_box;
-use tokio::io::AsyncReadExt;
 
 pub struct BrokerServer {
     ring: Arc<RingBuffer>,
@@ -58,7 +58,7 @@ impl BrokerServer {
 async fn handle_connection(
     mut socket: TcpStream,
     ring: Arc<RingBuffer>,
-    mut shutdown: watch::Receiver<bool>
+    mut shutdown: watch::Receiver<bool>,
 ) -> Result<(), NetworkError> {
     socket.set_nodelay(true)?;
 
@@ -89,33 +89,37 @@ async fn handle_connection(
             for _ in 0..BATCH_SIZE {
                 match consumer_ring.try_read(&mut buf[batch_size..]) {
                     Ok(size) => {
-                        match ProcessedMessage::from_bytes(&buf[batch_size..batch_size+size]) {
+                        match ProcessedMessage::from_bytes(&buf[batch_size..batch_size + size]) {
                             Some(msg) => {
                                 messages_processed += 1;
                                 black_box(msg);
-                            },
+                            }
                             None => {
                                 processing_errors += 1;
                             }
                         }
                         batch_size += size;
                         messages_consumed += 1;
-                    },
+                    }
                     Err(BrokerError::BufferEmpty) => {
-                        if batch_size > 0 { break }
+                        if batch_size > 0 {
+                            break;
+                        }
                         tokio::task::yield_now().await;
                         continue;
-                    },
+                    }
                     Err(e) => {
                         eprintln!("ring buffer read error: {:?}", e);
                         break;
-                    },
+                    }
                 }
             }
 
             if messages_consumed % 1_000_000 == 0 && messages_consumed > 0 {
-                println!("Stats: consumed={}, processed={}, errors={}",
-                    messages_consumed, messages_processed, processing_errors);
+                println!(
+                    "Stats: consumed={}, processed={}, errors={}",
+                    messages_consumed, messages_processed, processing_errors
+                );
             }
             current_buf = 1 - current_buf;
         }
@@ -169,4 +173,3 @@ async fn handle_connection(
     consumer.await?;
     Ok(())
 }
-

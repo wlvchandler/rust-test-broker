@@ -1,6 +1,6 @@
-use std::hint::black_box;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
+use std::hint::black_box;
 
 pub struct ProcessedMessage {
     pub timestamp: u64,
@@ -11,7 +11,9 @@ pub struct ProcessedMessage {
 
 impl ProcessedMessage {
     pub fn from_bytes(data: &[u8]) -> Option<Self> {
-        if data.len() < 20 { return None; }
+        if data.len() < 20 {
+            return None;
+        }
 
         let timestamp = u64::from_le_bytes(data[0..8].try_into().ok()?);
         let sequence = u64::from_le_bytes(data[8..16].try_into().ok()?);
@@ -49,7 +51,9 @@ impl ProcessedMessage {
         }
 
         // simulate payload processing
-        let sum: u32 = self.payload.iter()
+        let sum: u32 = self
+            .payload
+            .iter()
             .enumerate()
             .map(|(i, &b)| b as u32 * i as u32)
             .sum();
@@ -82,4 +86,3 @@ impl MessageHeader {
         }
     }
 }
-

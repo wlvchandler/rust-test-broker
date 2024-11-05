@@ -1,14 +1,17 @@
 use broker::BrokerClient;
-use std::time::Instant;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
+use std::time::Instant;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     const MESSAGE_SIZE: usize = 1024;
     const ITERATIONS: usize = 1_000_000;
 
-    println!("test_start msg_count:{} msg_bytes:{}", ITERATIONS, MESSAGE_SIZE);
+    println!(
+        "test_start msg_count:{} msg_bytes:{}",
+        ITERATIONS, MESSAGE_SIZE
+    );
     let mut client = BrokerClient::connect("127.0.0.1:7878").await?;
 
     let mut data = vec![0u8; MESSAGE_SIZE];
@@ -42,8 +45,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\nResults (time: {:?}):", elapsed);
     println!("Throughput: {:.2} GB/s", throughput / 1e9);
-    println!("Messages/sec: {:.2}", ITERATIONS as f64 / elapsed.as_secs_f64());
+    println!(
+        "Messages/sec: {:.2}",
+        ITERATIONS as f64 / elapsed.as_secs_f64()
+    );
 
     Ok(())
 }
-
